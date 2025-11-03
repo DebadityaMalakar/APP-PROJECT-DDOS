@@ -146,7 +146,7 @@ public class DDosGlobe extends Application {
 
     private void startApiDataFetching() {
         apiScheduler = Executors.newScheduledThreadPool(1);
-        apiScheduler.scheduleAtFixedRate(this::fetchApiData, 0, 2, TimeUnit.SECONDS);
+        apiScheduler.scheduleAtFixedRate(this::fetchApiData, 0, 3, TimeUnit.SECONDS);
     }
 
     private void stopApiScheduler() {

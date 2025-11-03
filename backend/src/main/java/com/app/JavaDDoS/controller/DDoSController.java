@@ -2,14 +2,11 @@ package com.app.JavaDDoS.controller;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.*;
-
 import org.springframework.http.MediaType;
 import reactor.core.publisher.Flux;
+
 import java.time.Duration;
-
-
+import java.util.*;
 
 @RestController
 public class DDoSController {
@@ -25,58 +22,51 @@ public class DDoSController {
     );
 
     private static final List<String> protocols = List.of("HTTP", "HTTPS", "WebSocket");
-
     private final Random rand = new Random();
+
+    private final List<Map.Entry<String, String>> countryPairs = new ArrayList<>();
+
+    public DDoSController() {
+        continentCountries.forEach((continent, countries) -> {
+            for (String country : countries) {
+                countryPairs.add(Map.entry(continent, country));
+            }
+        });
+    }
 
     @GetMapping("/simulate-ddos")
     public List<Map<String, String>> simulateDDoS() {
-        List<Map<String, String>> attacks = new ArrayList<>();
-
-        // Flatten all countries into a list of (continent, country) pairs
-        List<Map.Entry<String, String>> countryPairs = new ArrayList<>();
-        continentCountries.forEach((continent, countries) -> {
-            for (String country : countries) {
-                countryPairs.add(Map.entry(continent, country));
-            }
-        });
-
-        // Shuffle and pick 50
         Collections.shuffle(countryPairs);
         List<Map.Entry<String, String>> selected = countryPairs.subList(0, Math.min(50, countryPairs.size()));
 
+        List<Map<String, String>> attacks = new ArrayList<>();
         for (Map.Entry<String, String> entry : selected) {
-            Map<String, String> attack = new HashMap<>();
-            attack.put("continent", entry.getKey());
-            attack.put("country", entry.getValue());
-            attack.put("ip", randomIP());
-            attack.put("protocol", randomProtocol());
-            attack.put("timestamp", new Date().toString());
-            attacks.add(attack);
+            attacks.add(generateAttack(entry));
         }
-
         return attacks;
     }
+
     @GetMapping(value = "/simulate-ddos/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<Map<String, String>> streamDDoS() {
-        List<Map.Entry<String, String>> countryPairs = new ArrayList<>();
-        continentCountries.forEach((continent, countries) -> {
-            for (String country : countries) {
-                countryPairs.add(Map.entry(continent, country));
-            }
-        });
-
-        return Flux.interval(Duration.ofSeconds(1)).map(i -> {
+    public Flux<List<Map<String, String>>> streamDDoS() {
+        return Flux.interval(Duration.ofSeconds(5)).map(i -> {
             Collections.shuffle(countryPairs);
-            Map.Entry<String, String> entry = countryPairs.get(0);
-
-            Map<String, String> attack = new HashMap<>();
-            attack.put("continent", entry.getKey());
-            attack.put("country", entry.getValue());
-            attack.put("ip", randomIP());
-            attack.put("protocol", randomProtocol());
-            attack.put("timestamp", new Date().toString());
-            return attack;
+            List<Map<String, String>> batch = new ArrayList<>();
+            for (int j = 0; j < 5; j++) {
+                Map.Entry<String, String> entry = countryPairs.get(j);
+                batch.add(generateAttack(entry));
+            }
+            return batch;
         });
+    }
+
+    private Map<String, String> generateAttack(Map.Entry<String, String> entry) {
+        Map<String, String> attack = new HashMap<>();
+        attack.put("continent", entry.getKey());
+        attack.put("country", entry.getValue());
+        attack.put("ip", randomIP());
+        attack.put("protocol", randomProtocol());
+        attack.put("timestamp", new Date().toString());
+        return attack;
     }
 
     private String randomIP() {
